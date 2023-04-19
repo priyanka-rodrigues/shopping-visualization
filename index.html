@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+<style>
+    .container {
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    .axis path {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .d3-tip {
+        line-height: 1;
+        font-weight: normal;
+        padding: 7px;
+        background: rgba(103, 100, 100, 0.8);
+        color: #fff;
+        border-radius: 2px;
+    }
+</style>
+
+<body>
+    <div class="container">
+        <p class="lead text-center"> Social Media Influence on Shopping</p>
+        <br>
+        <div class="d-flex justify-content-center">
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="segments" value="gender"
+                    onchange="onSegmentChange(this.value)" checked>
+                <label class="form-check-label">Gender</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="segments" value="employment"
+                    onchange="onSegmentChange(this.value)">
+                <label class="form-check-label">Employment Status</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="segments" value="race"
+                    onchange="onSegmentChange(this.value)">
+                <label class="form-check-label">Race</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="segments" value="maritalStatus"
+                    onchange="onSegmentChange(this.value)">
+                <label class="form-check-label">Marital Status</label>
+            </div>
+        </div>
+        <br />
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-center">Platform toggles</h6>
+                        <div class="card-text categories">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="col">
+                <div class="card">
+                    <div class="card-body graph">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br>
+        <br>
+        <div class="row">
+
+            <p> The above visualization has been created using the data provided by King's College London. Further
+                analyis of data was carried
+                out using the segment type and segment description column to create 4 distinct groups namely Gender,
+                Employment Status, Race and Marital Status</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+    <script src="https://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+    <script>
+        const genderData = [
+
+
+            {
+                state: 'Female',
+                stats: [222, 535, 29, 57, 271]
+            },
+            {
+                state: 'Male',
+                stats: [326, 380, 56, 122, 678]
+            }
+
+        ];
+        const employmentData = [
+            {
+                state: 'Full-time',
+                stats: [23, 37, 6, 6, 51]
+            },
+            {
+                state: 'Unemployed',
+                stats: [198, 299, 37, 68, 325]
+            },
+            {
+                state: 'Part-time',
+                stats: [147, 239, 12, 56, 274]
+            }
+        ];
+        const raceData = [
+            {
+                state: 'Native American',
+                stats: [2, 6, 0, 2, 3]
+            },
+            {
+                state: 'White',
+                stats: [352, 498, 47, 102, 573]
+            },
+            {
+                state: 'Black',
+                stats: [13, 41, 3, 8, 29]
+            },
+            {
+                state: 'Asian',
+                stats: [51, 61, 7, 4, 69]
+            },
+
+            {
+                state: 'Hispanic',
+                stats: [20, 38, 3, 11, 41]
+            },
+
+            {
+                state: 'Jewish',
+                stats: [68, 68, 9, 6, 83]
+            },
+
+            {
+                state: 'Other',
+                stats: [20, 34, 3, 1, 34]
+            }
+
+        ];
+        const maritalStatusData = [
+            {
+                state: 'Unmarried',
+                stats: [12, 10, 79, 11, 88]
+            },
+
+            {
+                state: 'Married',
+                stats: [128, 245, 25, 57, 325]
+            }
+        ];
+
+        let data = getData('gender');
+        const platformIds = ['FB', 'Insta', 'SC', 'Twit', 'Other'];
+        const platforms = ['Facebook', 'Instagram', 'Snapchat', 'Twitter', 'Other'];
+
+        let svg;
+        let margin;
+        let width;
+        let height;
+        let x;
+        let y0;
+        let xAxis;
+        let yAxis;
+
+        // the scale for each state
+        const y1 = d3.scale.ordinal();
+        // just a simple scale of colors
+        const color = d3.scale.ordinal()
+            .range(["#00ff80", "#beaed4", "#fdc086", "#ffff99", "#a05d56", "#386cb0"]);
+
+        createCheckbox();
+        createSvg();
+
+        function setGraphParameters() {
+            margin = { top: 10, right: 30, bottom: 50, left: 130 };
+            width = 1000 - margin.left - margin.right;
+            height = data.length * 100 - margin.top - margin.bottom;
+            x = d3.scale.linear().range([0, width]);
+            // the scale for each state
+            y0 = d3.scale.ordinal().rangeBands([0, height], .1);
+            xAxis = d3.svg.axis()
+                .scale(x)
+                .orient("bottom")
+                .tickFormat(d3.format("s"));
+
+            yAxis = d3.svg.axis()
+                .scale(y0)
+                .orient("left");
+        }
+
+        function createCheckbox() {
+            d3.select('.categories').selectAll('.checkbox')
+                .data(platformIds)
+                .enter()
+                .append('div')
+                .attr('class', 'checkbox')
+                .append('label').html((id, index) => {
+                    const div = '<div class="form-check form-switch">';
+                    const checkbox = '<input id="' + id + '" type="checkbox" class="form-check-input category" checked = "true">';
+                    return div + checkbox + platforms[index] + '</div>';
+                });
+
+            d3.select('.categories').selectAll('.category').on('change', function () {
+                updateGraph(getSelectedPlatformIds(), svg);
+            });
+        }
+
+        function onSegmentChange(value) {
+            data = getData(value);
+            createSvg();
+        }
+
+        function getData(selectedValue) {
+            switch (selectedValue) {
+                case 'gender':
+                    return genderData;
+                case 'employment':
+                    return employmentData;
+                case 'race':
+                    return raceData;
+                case 'maritalStatus':
+                    return maritalStatusData;
+            }
+        }
+
+        function createSvg() {
+            setGraphParameters();
+            if (svg) {
+                d3.select("svg").remove();
+            }
+            svg = d3.select(".graph").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+            renderGraph(svg);
+            updateGraph(getSelectedPlatformIds(), svg);
+        }
+
+        function getSelectedPlatformIds() {
+            const x = d3.select('.categories').selectAll('.category:checked');
+            return x[0].map((category) => category.id);
+        }
+
+        function renderGraph(svg) {
+            x.domain([0, 0]);
+            y0.domain(data.map(function (d) {
+                return d.state;
+            }));
+            y1.domain(platforms).rangeRoundBands([0, y0.rangeBand()]);
+
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis);
+
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+        }
+
+        function updateGraph(selectedIds, svg) {
+            const statesData = data.map(stateData => {
+                return {
+                    state: stateData.state,
+                    stats: selectedIds.map(function (selectedId) {
+                        const index = platformIds.findIndex(id => selectedId === id);
+                        return {
+                            id: platformIds[index],
+                            name: platforms[index],
+                            value: stateData.stats[index]
+                        };
+                    })
+                }
+            });
+            const tip = d3.tip()
+                .attr('class', 'd3-tip')
+                .offset([-10, 0])
+                .html(function (d) {
+                    return "<span style='color:white'>" + d.name + ": " + d.value + "</span>";
+                })
+
+            svg.call(tip)
+            x.domain([0, d3.max(statesData, function (d) {
+                return d3.max(d.stats, function (d) {
+                    return d.value
+                });
+            })]);
+            y0.domain(statesData.map(function (d) {
+                return d.state;
+            }));
+            y1.domain(platformIds).rangeRoundBands([0, y0.rangeBand()]);
+
+            svg.selectAll('.axis.x').call(xAxis);
+            svg.selectAll('.axis.y').call(yAxis);
+
+            const state = svg.selectAll(".state")
+                .data(statesData);
+
+            state.enter().append("g")
+                .attr("class", "state")
+                .attr("transform", function (d) {
+                    return "translate(0, " + y0(d.state) + ")";
+                });
+
+            const stat = state.selectAll("rect")
+                .data(function (d) {
+                    return d.stats;
+                });
+
+            stat.enter().append("rect")
+                .attr('width', 0);
+
+            stat.attr("x", 0)
+                .attr("y", function (d, index) {
+                    return y1(platformIds[index]);
+                })
+                .attr("id", function (d) {
+                    return d.id;
+                })
+                .on('mouseover', tip.show)
+                .on('mouseout', tip.hide)
+                .style("fill", function (d) {
+                    return color(d.name);
+                })
+                .text(function (d) {
+                    return d.name
+                })
+                .transition()
+                .attr("width", function (d) {
+                    return x(d.value);
+                })
+                .attr("height", y1.rangeBand())
+
+
+            stat.exit().transition().attr("width", 0).remove();
+
+            const legend = svg.selectAll(".legend")
+                .data(statesData[0].stats.map(function (stat) {
+                    return stat.name;
+                }));
+
+            legend.enter().append("g");
+            legend
+                .attr("class", "legend")
+                .attr("transform", function (d, i) {
+                    return "translate(0," + (i * 20) + ")";
+                });
+
+            const legendColor = legend.selectAll('.legend-color').data(function (d) {
+                return [d];
+            });
+            legendColor.enter().append("rect");
+            legendColor.attr('class', 'legend-color')
+                .attr("x", width - 18)
+                .attr("width", 18)
+                .attr("height", 18)
+                .style("fill", color);
+
+            const legendText = legend.selectAll('.legend-text').data(function (d) {
+                return [d];
+            });
+
+            legendText.enter().append("text");
+            legendText.attr('class', 'legend-text')
+                .attr("x", width - 24)
+                .attr("y", 9)
+                .attr("dy", ".35em")
+                .style("text-anchor", "end")
+                .text(function (d) {
+                    return d;
+                });
+
+            legend.exit().remove();
+        }
+    </script>
+</body>
+
+</html>
